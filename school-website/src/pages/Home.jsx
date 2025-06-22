@@ -3,6 +3,9 @@ import { db } from "@/firebase/firebaseConfig";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { UserCircle, Bell, ArrowRight } from "lucide-react";
 import logo from "../assets/logo.jpg"; // Placeholder logo, replace with actual logo path
+import GallerySection from "@/components/ui/gallarySection";
+import FacilitiesSection from "@/components/ui/FacilitiesSection";
+import AboutSection from "@/components/ui/AboutSection";
 
 const Home = () => {
   const [homeContent, setHomeContent] = useState({});
@@ -110,7 +113,7 @@ const Home = () => {
       <header className="bg-gradient-to-r bg-gray-300 text-gray-600 py-2">
         <div className="mr-4 ml-4 mx-auto flex flex-col sm:flex-row items-center justify-between">
           <div className="flex items-center md:mb-1">
-            <div className="w-15 h-15 rounded-full sm:w-24 sm:h-24 md:w-30 md:h-30 sm:rounded-full overflow-hidden bg-white mr-4 flex items-center justify-center">
+            <div className="w-15 h-15 rounded-full sm:w-24 sm:h-24 sm:rounded-full overflow-hidden bg-white mr-4 flex items-center justify-center">
               {/* Logo with explicit rounded corners for mobile */}
               <img
                 src={logo}
@@ -151,122 +154,55 @@ const Home = () => {
       </header>
 
       {/* Hero Banner with Moving Gallery Background */}
-      <div>
-        <section className="relative h-64 sm:h-96 md:h-120 overflow-hidden">
-          {/* Moving gallery in background */}
-          <div className="absolute inset-0 w-full h-full">
-            <div className="flex gap-4 animate-scroll-slow whitespace-nowrap py-4">
-              {[...gallery, ...gallery, ...gallery].map((img, index) => (
-                <div
-                  key={`${img.id}-${index}`}
-                  className="min-w-[300px] sm:min-w-[280px] md:min-w-[600px] h-full"
-                >
-                  <img
-                    src={img.imageUrl || "/api/placeholder/1600/900"}
-                    alt="gallery"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-green-950 to-transparent flex items-center">
-            <div className="container mx-auto px-4 text-center md:text-left md:ml-12">
-              <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-2 sm:mb-4">{homeContent.welcome}</h2>
-              <p className="text-sm sm:text-lg md:text-xl text-white max-w-3xl mx-auto md:mx-0 mb-4 sm:mb-8">{homeContent.description}</p>
-              <button className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-2 sm:py-3 px-4 sm:px-6 text-sm sm:text-base rounded-lg transition-colors">
-                Explore Our School
-              </button>
-            </div>
-          </div>
-        </section>
-      </div>
+      <GallerySection 
+        gallery={gallery} 
+        homeContent={homeContent} 
+        loading={loading} 
+      />
+
 
       {/* Notice Ticker */}
       {notices.length > 0 && (
-        <div className="bg-yellow-400 py-2 px-4 overflow-hidden">
+        <div className="bg-yellow-400 py-2 px-4 overflow-hidden relative">
           <div className="flex items-center text-blue-900 font-medium">
-            <span className="mr-4 whitespace-nowrap text-sm sm:text-base">📢 Latest:</span>
-            <div className="whitespace-nowrap animate-marquee text-sm sm:text-base overflow-hidden">
-              {notices.map((notice, index) => (
-                <span key={index} className="mr-16">
-                  {notice.title} {index < notices.length ? " • " + notice.content : ''}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* About Section */}
-      <section id="about" className="py-8 sm:py-16 bg-white">
-        <div className="max-w-6xl mx-auto px-4">
-          <h2 className="text-2xl sm:text-3xl font-bold text-blue-900 text-center mb-8 sm:mb-12 relative">
-            <span className="relative z-10">About Our School</span>
-            <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-24 h-1"></span>
-          </h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
-            <div className="bg-blue-50 rounded-lg p-4 sm:p-6 shadow-md transform hover:scale-105 transition-transform">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-yellow-400 flex items-center justify-center text-blue-900 text-xl sm:text-2xl mx-auto mb-4">
-                🎯
-              </div>
-              <h3 className="text-lg sm:text-xl font-bold text-blue-900 text-center mb-2 sm:mb-4">Our Mission</h3>
-              <p className="text-gray-700 text-center text-sm sm:text-base">{homeContent.mission}</p>
-            </div>
-
-            <div className="bg-blue-50 rounded-lg p-4 sm:p-6 shadow-md transform hover:scale-105 transition-transform">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-yellow-400 flex items-center justify-center text-blue-900 text-xl sm:text-2xl mx-auto mb-4">
-                👁️
-              </div>
-              <h3 className="text-lg sm:text-xl font-bold text-blue-900 text-center mb-2 sm:mb-4">Our Vision</h3>
-              <p className="text-gray-700 text-center text-sm sm:text-base">{homeContent.vision}</p>
-            </div>
-
-            <div className="bg-blue-50 rounded-lg p-4 sm:p-6 shadow-md transform hover:scale-105 transition-transform sm:col-span-2 md:col-span-1 mx-auto sm:mx-0 max-w-md">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-yellow-400 flex items-center justify-center text-blue-900 text-xl sm:text-2xl mx-auto mb-4">
-                📜
-              </div>
-              <h3 className="text-lg sm:text-xl font-bold text-blue-900 text-center mb-2 sm:mb-4">Our History</h3>
-              <p className="text-gray-700 text-center text-sm sm:text-base">{homeContent.history}</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Facilities Section with Moving Facilities */}
-      <section id="facilities" className="py-8 sm:py-16 bg-blue-50">
-        <div className="max-w-6xl mx-auto px-4">
-          <h2 className="text-2xl sm:text-3xl font-bold text-blue-900 text-center mb-8 sm:mb-12 relative">
-            <span className="relative z-10">Our Facilities</span>
-            <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-24 h-1"></span>
-          </h2>
-
-          <div className="overflow-hidden scroll-container">
-            {homeContent.facilities && homeContent.facilities.length > 0 ? (
-              <div className="flex gap-4 sm:gap-6 animate-scroll whitespace-nowrap py-4">
-                {[...homeContent.facilities, ...homeContent.facilities].map((facility, index) => (
-                  <div key={index} className="min-w-52 sm:min-w-64 bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow">
-                    <div className="h-32 sm:h-48 overflow-hidden">
-                      <img
-                        src={facility.imageUrl || "/api/placeholder/400/300"}
-                        alt={facility.name}
-                        className="w-full h-full object-cover transition-transform hover:scale-110 duration-500"
-                      />
-                    </div>
-                    <div className="p-3 sm:p-6">
-                      <h3 className="font-bold text-base sm:text-xl text-blue-900 mb-1 sm:mb-2">{facility.name}</h3>
-                      <p className="text-gray-600 text-xs sm:text-base">{facility.description}</p>
-                    </div>
-                  </div>
+            <span className="mr-4 whitespace-nowrap text-sm sm:text-base z-10 relative bg-yellow-400">📢 Latest:</span>
+            <div className="flex-1 relative overflow-hidden">
+              <div className="absolute left-0 top-0 w-8 h-full bg-gradient-to-r from-yellow-400 to-transparent z-10 pointer-events-none"></div>
+              <div className="whitespace-nowrap animate-marquee text-sm sm:text-base">
+                {notices.map((notice, index) => (
+                  <span key={index} className="mr-16">
+                    {notice.title} • {notice.content}
+                  </span>
+                ))}
+                {notices.map((notice, index) => (
+                  <span key={`duplicate-${index}`} className="mr-16">
+                    {notice.title} • {notice.content}
+                  </span>
                 ))}
               </div>
-            ) : (
-              <div className="text-center text-gray-500">No facilities information available</div>
-            )}
+            </div>
           </div>
+          <style jsx>{`
+           @keyframes marquee {
+             0% { transform: translateX(0%); }
+             100% { transform: translateX(-50%); }
+           }
+           .animate-marquee {
+             animation: marquee 20s linear infinite;
+           }
+           }
+         `}</style>
         </div>
-      </section>
+      )}
+      
+      {/* About Section */}
+      <AboutSection homeContent={homeContent} />
+
+      {/* Facilities Section with Moving Facilities */}
+      <FacilitiesSection 
+        homeContent={homeContent} 
+        loading={loading} 
+      />
 
       {/* Contact Section */}
       <section id="contact" className="py-8 sm:py-16 bg-blue-900 text-white">
@@ -363,34 +299,13 @@ const Home = () => {
 
       {/* Custom CSS for animations */}
       <style jsx>{`
-        @keyframes scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-100%); }
-        }
-        .animate-scroll {
-          animation: scroll 30s linear infinite;
-          width: fit-content; /* Ensure container expands to fit all items */
-        }
-          /* Mobile-specific animation that moves more slowly */
-        @media (max-width: 640px) {
-         @keyframes scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(calc(-100%)); }
-        }
-      }
-        @keyframes scroll-slow {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-700%); }
-        }
-        .animate-scroll-slow {
-          animation: scroll-slow 80s linear infinite;
-        }
+      
         @keyframes marquee {
           0% { transform: translateX(0); }
           100% { transform: translateX(-100%); }
         }
         .animate-marquee {
-          animation: marquee 20s linear infinite;
+          animation: marquee 10s linear infinite;
         }
       `}</style>
     </div>
