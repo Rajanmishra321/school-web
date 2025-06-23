@@ -1,141 +1,329 @@
-// FacilitiesSection.jsx
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const FacilitiesSection = ({ homeContent, loading }) => {
   const scrollRef = useRef(null);
+  const animationRef = useRef(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [visibleCards, setVisibleCards] = useState(new Set());
+  const [hoveredCard, setHoveredCard] = useState(null);
+  const observerRef = useRef(null);
+  const scrollPosition = useRef(0);
+  const hoverTimeoutRef = useRef(null); // Add timeout ref for cleanup
 
   useEffect(() => {
-    // Don't start animation if data is still loading or facilities is empty
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setVisibleCards(prev => new Set([...prev, entry.target.dataset.index]));
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+      // Clear any pending timeouts
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (loading || !homeContent?.facilities || homeContent.facilities.length === 0) return;
 
     const scrollContainer = scrollRef.current;
     if (!scrollContainer) return;
 
-    let scrollAmount = 0;
-    const scrollStep = 0.8; // pixels per frame - adjust for speed
-    const scrollSpeed = 10; // milliseconds between frames
-
-    const scroll = () => {
-      scrollAmount += scrollStep;
-      
-      // Get the width of one complete set (half of total width since we duplicated)
-      const totalWidth = scrollContainer.scrollWidth;
-      const singleSetWidth = totalWidth / 2;
-      
-      // Reset when we've scrolled through one complete set
-      if (scrollAmount >= singleSetWidth) {
-        scrollAmount = 0;
+    const scrollSpeed = 1; // pixels per frame
+    
+    const animate = () => {
+      if (!isPaused && scrollContainer) {
+        scrollPosition.current += scrollSpeed;
+        
+        const singleSetWidth = scrollContainer.scrollWidth / 2;
+        
+        if (scrollPosition.current >= singleSetWidth) {
+          scrollPosition.current = 0;
+        }
+        
+        scrollContainer.style.transform = `translateX(-${scrollPosition.current}px)`;
       }
       
-      scrollContainer.style.transform = `translateX(-${scrollAmount}px)`;
+      animationRef.current = requestAnimationFrame(animate);
     };
 
-    const interval = setInterval(scroll, scrollSpeed);
-    return () => clearInterval(interval);
-  }, [loading, homeContent?.facilities]);
+    animationRef.current = requestAnimationFrame(animate);
+    
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [loading, homeContent?.facilities, isPaused]);
 
-  // Show loading state
   if (loading) {
     return (
-      <section id="facilities" className="py-8 sm:py-16 bg-blue-50">
-        <div className="max-w-6xl mx-auto px-4">
-          <h2 className="text-2xl sm:text-3xl font-bold text-blue-900 text-center mb-8 sm:mb-12">
-            Our Facilities
-          </h2>
-          <div className="text-center text-gray-500">Loading facilities...</div>
+      <section id="facilities" className="py-16 sm:py-24 bg-gradient-to-br from-blue-50 via-white to-indigo-50 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-blue-400 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-48 h-48 bg-indigo-400 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 relative z-10">
+          <div className="text-center mb-16">
+            <div className="h-8 bg-gray-200 rounded-lg w-64 mx-auto mb-4 animate-pulse"></div>
+            <div className="h-4 bg-gray-100 rounded w-96 mx-auto animate-pulse"></div>
+          </div>
+          
+          <div className="flex gap-6 overflow-hidden">
+            {[...Array(4)].map((_, index) => (
+              <div key={index} className="w-80 bg-white rounded-2xl shadow-lg animate-pulse flex-shrink-0">
+                <div className="h-56 bg-gray-200 rounded-t-2xl"></div>
+                <div className="p-6">
+                  <div className="h-6 bg-gray-200 rounded mb-3"></div>
+                  <div className="h-4 bg-gray-100 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-100 rounded w-3/4"></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     );
   }
 
-  // Show message if no facilities
   if (!homeContent?.facilities || homeContent.facilities.length === 0) {
     return (
-      <section id="facilities" className="py-8 sm:py-16 bg-blue-50">
-        <div className="max-w-6xl mx-auto px-4">
-          <h2 className="text-2xl sm:text-3xl font-bold text-blue-900 text-center mb-8 sm:mb-12">
+      <section id="facilities" className="py-16 sm:py-24 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 text-center mb-12">
             Our Facilities
           </h2>
-          <div className="text-center text-gray-500">No facilities information available</div>
+          <div className="text-center text-gray-500 text-lg">No facilities information available</div>
         </div>
       </section>
     );
   }
 
-  return (
-    <section id="facilities" className="py-8 sm:py-16 bg-blue-50">
-      <div className="max-w-6xl mx-auto px-4">
-        <h2 className="text-2xl sm:text-3xl font-bold text-blue-900 text-center mb-8 sm:mb-12 relative">
-          <span className="relative z-10">Our Facilities</span>
-          <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-yellow-400"></span>
-        </h2>
+  const handleCardHover = (cardId, isHovering) => {
+    // Clear any existing timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
 
-        <div className="overflow-hidden">
-          <div className="py-4">
+    if (isHovering) {
+      // Immediate hover response
+      setIsPaused(true);
+      setHoveredCard(cardId);
+    } else {
+      // Delayed unhover with fallback cleanup
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsPaused(false);
+        setHoveredCard(null);
+        hoverTimeoutRef.current = null;
+      }, 100); // Small delay to prevent flickering
+    }
+  };
+
+  // Add a global mouse leave handler for the entire scroll container
+  const handleContainerMouseLeave = () => {
+    // Force reset hover state when mouse leaves the entire container
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    setIsPaused(false);
+    setHoveredCard(null);
+  };
+
+  const FacilityCard = ({ facility, index, isOriginal }) => {
+    const cardRef = useRef(null);
+    const cardId = `${isOriginal ? 'original' : 'duplicate'}-${index}`;
+    const isHovered = hoveredCard === cardId;
+    
+    useEffect(() => {
+      if (cardRef.current && observerRef.current) {
+        cardRef.current.dataset.index = cardId;
+        observerRef.current.observe(cardRef.current);
+      }
+    }, [cardId]);
+
+    const isVisible = visibleCards.has(cardId);
+
+    return (
+      <div 
+        ref={cardRef}
+        className={`w-80 bg-white rounded-2xl overflow-hidden shadow-lg transition-all duration-500 ease-out flex-shrink-0 group cursor-pointer ${
+          isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+        } ${
+          isHovered 
+            ? 'shadow-2xl -translate-y-6 scale-110 z-50' 
+            : 'hover:shadow-xl hover:-translate-y-2 hover:scale-105 z-10'
+        }`}
+        style={{ 
+          transitionDelay: `${index * 100}ms`,
+          transformOrigin: 'center center'
+        }}
+        onMouseEnter={() => handleCardHover(cardId, true)}
+        onMouseLeave={() => handleCardHover(cardId, false)}
+      >
+        <div className={`absolute inset-0 rounded-2xl transition-all duration-500 ${
+          isHovered 
+            ? 'bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-indigo-500/10' 
+            : 'bg-transparent'
+        }`}></div>
+        
+        <div className={`absolute inset-0 rounded-2xl transition-all duration-500 ${
+          isHovered 
+            ? 'ring-2 ring-blue-400/30 ring-offset-2 ring-offset-white' 
+            : 'ring-0'
+        }`}></div>
+        
+        <div className="h-56 overflow-hidden relative">
+          <div className={`absolute inset-0 bg-gradient-to-t transition-all duration-500 z-10 ${
+            isHovered 
+              ? 'from-black/40 via-transparent to-transparent' 
+              : 'from-black/20 via-transparent to-transparent'
+          }`}></div>
+          
+          <img
+            src={facility.imageUrl || "/api/placeholder/400/300"}
+            alt={facility.name}
+            className={`w-full h-full object-cover transition-all duration-700 ${
+              isHovered 
+                ? 'scale-110 brightness-110' 
+                : 'scale-100 brightness-100'
+            }`}
+            loading="lazy"
+          />
+          
+          <div className={`absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-blue-600 shadow-md transition-all duration-500 ${
+            isHovered 
+              ? 'opacity-100 translate-x-0 scale-110' 
+              : 'opacity-0 translate-x-8 scale-90'
+          } z-20`}>
+            <div className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div className={`p-6 relative z-20 transition-all duration-500 ${
+          isHovered 
+            ? 'bg-gradient-to-b from-white to-blue-50/30' 
+            : 'bg-white'
+        }`}>
+          <h3 className={`font-bold text-xl mb-3 transition-all duration-500 ${
+            isHovered 
+              ? 'text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 scale-105' 
+              : 'text-gray-900 scale-100'
+          }`}>
+            {facility.name}
+          </h3>
+          
+          <p className={`text-sm leading-relaxed mb-4 transition-all duration-500 ${
+            isHovered 
+              ? 'text-gray-700' 
+              : 'text-gray-600'
+          }`}>
+            {facility.description}
+          </p>
+          
+          <button className={`relative w-full py-3 px-6 rounded-xl font-medium overflow-hidden transition-all duration-500 ${
+            isHovered 
+              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white opacity-100 translate-y-0 shadow-lg scale-105' 
+              : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white opacity-0 translate-y-4 scale-100'
+          }`}>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const mockFacilities = homeContent?.facilities || [
+    {
+      name: "Modern Conference Room",
+      description: "State-of-the-art conference room equipped with the latest technology for seamless meetings and presentations.",
+      imageUrl: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      name: "Fitness Center",
+      description: "Fully equipped fitness center with modern equipment and professional trainers to help you stay in shape.",
+      imageUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      name: "Rooftop Garden",
+      description: "Beautiful rooftop garden providing a peaceful environment for relaxation and outdoor meetings.",
+      imageUrl: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      name: "Cafeteria",
+      description: "Spacious cafeteria serving fresh, healthy meals prepared by professional chefs using quality ingredients.",
+      imageUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+    }
+  ];
+
+  return (
+    <section id="facilities" className="py-16 sm:py-24 bg-gradient-to-br from-blue-50 via-white to-indigo-50 relative overflow-hidden">
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-10 left-10 w-32 h-32 bg-blue-400 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-10 right-10 w-48 h-48 bg-indigo-400 rounded-full blur-3xl animate-pulse"></div>
+      </div>
+      
+      <div className="max-w-7xl mx-auto px-4 relative z-10">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 mb-4 relative">
+            Our Facilities
+            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 h-1 w-24 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full"></div>
+          </h2>
+          <p className="text-gray-600 text-lg max-w-2xl mx-auto leading-relaxed">
+            Discover our world-class facilities designed to provide the best experience and support for your needs
+          </p>
+        </div>
+
+        <div 
+          className="overflow-hidden relative"
+          onMouseLeave={handleContainerMouseLeave}
+        >
+          <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-blue-50 via-blue-50/80 to-transparent z-30 pointer-events-none"></div>
+          <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-indigo-50 via-indigo-50/80 to-transparent z-30 pointer-events-none"></div>
+          
+          <div className="py-8">
             <div 
               ref={scrollRef}
-              className="flex gap-4 sm:gap-6"
-              style={{ width: 'max-content' }}
+              className="flex gap-8"
+              style={{ 
+                width: 'max-content',
+                willChange: 'transform'
+              }}
             >
-              {/* Original facilities */}
-              {homeContent.facilities.map((facility, index) => (
-                <div 
-                  key={`original-${index}`} 
-                  className="w-52 sm:w-64 bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow flex-shrink-0"
-                >
-                  {/* Fixed height image container */}
-                  <div className="h-32 sm:h-48 overflow-hidden">
-                    <img
-                      src={facility.imageUrl || "/api/placeholder/400/300"}
-                      alt={facility.name}
-                      className="w-full h-full object-cover transition-transform hover:scale-110 duration-500"
-                    />
-                  </div>
-                  
-                  {/* Content container with flexible height */}
-                  <div className="p-3 sm:p-6 flex flex-col">
-                    <h3 className="font-bold text-base sm:text-xl text-blue-900 mb-1 sm:mb-2 line-clamp-2">
-                      {facility.name}
-                    </h3>
-                    <p className="text-gray-600 text-xs sm:text-sm leading-relaxed line-clamp-3">
-                      {facility.description}
-                    </p>
-                  </div>
-                </div>
+              {mockFacilities.map((facility, index) => (
+                <FacilityCard 
+                  key={`original-${index}`}
+                  facility={facility}
+                  index={index}
+                  isOriginal={true}
+                />
               ))}
               
-              {/* Duplicate facilities for seamless loop */}
-              {homeContent.facilities.map((facility, index) => (
-                <div 
-                  key={`duplicate-${index}`} 
-                  className="w-52 sm:w-64 bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow flex-shrink-0"
-                >
-                  {/* Fixed height image container */}
-                  <div className="h-32 sm:h-48 overflow-hidden">
-                    <img
-                      src={facility.imageUrl || "/api/placeholder/400/300"}
-                      alt={facility.name}
-                      className="w-full h-full object-cover transition-transform hover:scale-110 duration-500"
-                    />
-                  </div>
-                  
-                  {/* Content container with flexible height */}
-                  <div className="p-3 sm:p-6 flex flex-col">
-                    <h3 className="font-bold text-base sm:text-xl text-blue-900 mb-1 sm:mb-2 line-clamp-2">
-                      {facility.name}
-                    </h3>
-                    <p className="text-gray-600 text-xs sm:text-sm leading-relaxed line-clamp-3">
-                      {facility.description}
-                    </p>
-                  </div>
-                </div>
+              {mockFacilities.map((facility, index) => (
+                <FacilityCard 
+                  key={`duplicate-${index}`}
+                  facility={facility}
+                  index={index}
+                  isOriginal={false}
+                />
               ))}
             </div>
           </div>
         </div>
       </div>
     </section>
-    
   );
 };
 
