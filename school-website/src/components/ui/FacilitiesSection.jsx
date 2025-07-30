@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 const FacilitiesSection = ({ homeContent, loading }) => {
   const scrollRef = useRef(null);
@@ -8,7 +8,23 @@ const FacilitiesSection = ({ homeContent, loading }) => {
   const [hoveredCard, setHoveredCard] = useState(null);
   const observerRef = useRef(null);
   const scrollPosition = useRef(0);
-  const hoverTimeoutRef = useRef(null); // Add timeout ref for cleanup
+  const hoverTimeoutRef = useRef(null);
+  const containerRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                    window.innerWidth <= 768 || 
+                    'ontouchstart' in window;
+      setIsMobile(mobile);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
@@ -26,7 +42,6 @@ const FacilitiesSection = ({ homeContent, loading }) => {
       if (observerRef.current) {
         observerRef.current.disconnect();
       }
-      // Clear any pending timeouts
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current);
       }
@@ -39,7 +54,7 @@ const FacilitiesSection = ({ homeContent, loading }) => {
     const scrollContainer = scrollRef.current;
     if (!scrollContainer) return;
 
-    const scrollSpeed = 1; // pixels per frame
+    const scrollSpeed = 1;
     
     const animate = () => {
       if (!isPaused && scrollContainer) {
@@ -65,6 +80,62 @@ const FacilitiesSection = ({ homeContent, loading }) => {
       }
     };
   }, [loading, homeContent?.facilities, isPaused]);
+
+  const clearAllTimeouts = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+  }, []);
+
+  const resetHoverState = useCallback(() => {
+    clearAllTimeouts();
+    setIsPaused(false);
+    setHoveredCard(null);
+  }, [clearAllTimeouts]);
+
+  const handleCardHover = useCallback((cardId, isHovering) => {
+    // Skip all hover logic on mobile
+    if (isMobile) return;
+
+    clearAllTimeouts();
+
+    if (isHovering) {
+      setIsPaused(true);
+      setHoveredCard(cardId);
+    } else {
+      // Add delay to prevent flickering
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsPaused(false);
+        setHoveredCard(null);
+      }, 200);
+    }
+  }, [isMobile, clearAllTimeouts]);
+
+  // Force reset on container mouse leave
+  const handleContainerMouseLeave = useCallback(() => {
+    if (isMobile) return;
+    resetHoverState();
+  }, [isMobile, resetHoverState]);
+
+  // Handle window focus/blur to reset stuck states
+  useEffect(() => {
+    const handleFocus = () => {
+      if (!isMobile) resetHoverState();
+    };
+
+    const handleBlur = () => {
+      if (!isMobile) resetHoverState();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [isMobile, resetHoverState]);
 
   if (loading) {
     return (
@@ -110,41 +181,10 @@ const FacilitiesSection = ({ homeContent, loading }) => {
     );
   }
 
-  const handleCardHover = (cardId, isHovering) => {
-    // Clear any existing timeout
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-
-    if (isHovering) {
-      // Immediate hover response
-      setIsPaused(true);
-      setHoveredCard(cardId);
-    } else {
-      // Delayed unhover with fallback cleanup
-      hoverTimeoutRef.current = setTimeout(() => {
-        setIsPaused(false);
-        setHoveredCard(null);
-        hoverTimeoutRef.current = null;
-      }, 100); // Small delay to prevent flickering
-    }
-  };
-
-  // Add a global mouse leave handler for the entire scroll container
-  const handleContainerMouseLeave = () => {
-    // Force reset hover state when mouse leaves the entire container
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    setIsPaused(false);
-    setHoveredCard(null);
-  };
-
   const FacilityCard = ({ facility, index, isOriginal }) => {
     const cardRef = useRef(null);
     const cardId = `${isOriginal ? 'original' : 'duplicate'}-${index}`;
-    const isHovered = hoveredCard === cardId;
+    const isHovered = !isMobile && hoveredCard === cardId;
     
     useEffect(() => {
       if (cardRef.current && observerRef.current) {
@@ -158,19 +198,26 @@ const FacilitiesSection = ({ homeContent, loading }) => {
     return (
       <div 
         ref={cardRef}
-        className={`w-80 bg-white rounded-2xl overflow-hidden shadow-lg transition-all duration-500 ease-out flex-shrink-0 group cursor-pointer ${
+        className={`w-80 bg-white rounded-2xl overflow-hidden shadow-lg transition-all duration-500 ease-out flex-shrink-0 group ${
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
         } ${
           isHovered 
             ? 'shadow-2xl -translate-y-6 scale-110 z-50' 
-            : 'hover:shadow-xl hover:-translate-y-2 hover:scale-105 z-10'
+            : isMobile 
+              ? 'shadow-lg z-10' 
+              : 'hover:shadow-xl hover:-translate-y-2 hover:scale-105 z-10'
         }`}
         style={{ 
           transitionDelay: `${index * 100}ms`,
           transformOrigin: 'center center'
         }}
-        onMouseEnter={() => handleCardHover(cardId, true)}
-        onMouseLeave={() => handleCardHover(cardId, false)}
+        onMouseEnter={!isMobile ? () => handleCardHover(cardId, true) : undefined}
+        onMouseLeave={!isMobile ? () => handleCardHover(cardId, false) : undefined}
+        onTouchStart={(e) => {
+          if (isMobile) {
+            e.preventDefault();
+          }
+        }}
       >
         <div className={`absolute inset-0 rounded-2xl transition-all duration-500 ${
           isHovered 
@@ -200,6 +247,7 @@ const FacilitiesSection = ({ homeContent, loading }) => {
                 : 'scale-100 brightness-100'
             }`}
             loading="lazy"
+            draggable={false}
           />
           
           <div className={`absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-blue-600 shadow-md transition-all duration-500 ${
@@ -234,12 +282,15 @@ const FacilitiesSection = ({ homeContent, loading }) => {
             {facility.description}
           </p>
           
-          <button className={`relative w-full py-3 px-6 rounded-xl font-medium overflow-hidden transition-all duration-500 ${
-            isHovered 
-              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white opacity-100 translate-y-0 shadow-lg scale-105' 
-              : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white opacity-0 translate-y-4 scale-100'
-          }`}>
-          </button>
+          {!isMobile && (
+            <button className={`relative w-full py-3 px-6 rounded-xl font-medium overflow-hidden transition-all duration-500 ${
+              isHovered 
+                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white opacity-100 translate-y-0 shadow-lg scale-105' 
+                : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white opacity-0 translate-y-4 scale-100'
+            }`}>
+              Learn More
+            </button>
+          )}
         </div>
       </div>
     );
@@ -287,6 +338,7 @@ const FacilitiesSection = ({ homeContent, loading }) => {
         </div>
 
         <div 
+          ref={containerRef}
           className="overflow-hidden relative"
           onMouseLeave={handleContainerMouseLeave}
         >
