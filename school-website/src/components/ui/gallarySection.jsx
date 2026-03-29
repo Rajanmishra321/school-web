@@ -58,7 +58,7 @@ const GallerySection = ({ gallery, homeContent, loading }) => {
               {homeContent?.description || ""}
             </p>
             <button 
-              onClick={() => window.open('/school-brochure.pdf', '_blank')}
+              onClick={() => window.open(`/school-brochure.pdf?v=${Date.now()}`, '_blank')}
               className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-2 sm:py-3 px-4 sm:px-6 text-sm sm:text-base rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95"
             >
               <span className="flex items-center gap-2 justify-center">
@@ -135,7 +135,7 @@ const GallerySection = ({ gallery, homeContent, loading }) => {
             {homeContent?.description || ""}
           </p>
           <button
-            onClick={() => window.open('/school-brochure.pdf', '_blank')}
+            onClick={() => window.open(`/school-brochure.pdf?v=${Date.now()}`, '_blank')}
             className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-2 sm:py-3 px-4 sm:px-6 text-sm sm:text-base rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95"
           >
             <span className="flex items-center gap-2 justify-center">
